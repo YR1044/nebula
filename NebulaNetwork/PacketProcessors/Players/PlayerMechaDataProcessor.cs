@@ -1,29 +1,40 @@
-﻿using NebulaAPI;
+﻿#region
+
+using NebulaAPI.Packets;
+using NebulaModel;
+using NebulaModel.Logger;
 using NebulaModel.Networking;
 using NebulaModel.Packets;
 using NebulaModel.Packets.Players;
 using NebulaWorld;
 
-namespace NebulaNetwork.PacketProcessors.Players
-{
-    [RegisterPacketProcessor]
-    internal class PlayerMechaDataProcessor : PacketProcessor<PlayerMechaData>
-    {
-        private readonly IPlayerManager playerManager;
+#endregion
 
-        public PlayerMechaDataProcessor()
+namespace NebulaNetwork.PacketProcessors.Players;
+
+[RegisterPacketProcessor]
+internal class PlayerMechaDataProcessor : PacketProcessor<PlayerMechaData>
+{
+    protected override void ProcessPacket(PlayerMechaData packet, NebulaConnection conn)
+    {
+        if (IsClient)
         {
-            playerManager = Multiplayer.Session.Network.PlayerManager;
+            return;
         }
 
-        public override void ProcessPacket(PlayerMechaData packet, NebulaConnection conn)
+        var player = Multiplayer.Session.Server.Players.Get(conn);
+        if (player == null)
         {
-            if (IsClient)
-            {
-                return;
-            }
+            Log.Warn("Can't find the connected player for PlayerMechaData!");
+            return;
+        }
 
-            playerManager.UpdateMechaData(packet.Data, conn);
+        //Find correct player for data to update, preserve sand count if syncing is enabled
+        var sandCount = player.Data.Mecha.SandCount;
+        player.Data.Mecha = packet.Data;
+        if (Config.Options.SyncSoil)
+        {
+            player.Data.Mecha.SandCount = sandCount;
         }
     }
 }

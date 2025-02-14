@@ -1,28 +1,49 @@
-﻿using NebulaModel.DataStructures;
+﻿#region
+
 using System;
 using System.Collections.Generic;
+using NebulaModel.DataStructures;
+using NebulaModel.Logger;
 
-namespace NebulaWorld.Planet
+#endregion
+
+namespace NebulaWorld.Planet;
+
+public class PlanetManager : IDisposable
 {
-    public class PlanetManager : IDisposable
+    public readonly ToggleSwitch IsIncomingRequest = new();
+    public int TargetPlanet { get; set; }
+
+    public Dictionary<int, byte[]> PendingFactories { get; set; } = new();
+    public Dictionary<int, byte[]> PendingTerrainData { get; set; } = new();
+    public bool EnableVeinPacket { get; set; } = true;
+
+    public void Dispose()
     {
-        public Dictionary<int, byte[]> PendingFactories { get; private set; }
-        public Dictionary<int, byte[]> PendingTerrainData { get; private set; }
+        PendingFactories = null;
+        PendingTerrainData = null;
+        GC.SuppressFinalize(this);
+    }
 
-        public readonly ToggleSwitch IsIncomingRequest = new ToggleSwitch();
-        public bool EnableVeinPacket { get; set; } = true;
-
-        public PlanetManager()
+    public static void UnloadAllFactories()
+    {
+        Log.Info("UnloadAllFactories");
+        var gameData = GameMain.data;
+        Multiplayer.Session.Drones.ClearAllRemoteDrones();
+        using (Multiplayer.Session.Ships.PatchLockILS.On())
         {
-            PendingFactories = new Dictionary<int, byte[]>();
-            PendingTerrainData = new Dictionary<int, byte[]>();
-            EnableVeinPacket = true;
+            for (var i = gameData.factoryCount - 1; i >= 0; i--)
+            {
+                var planet = gameData.factories[i].planet;
+                planet.factory.Free();
+                planet.factory = null;
+                gameData.galaxy.astrosFactory[planet.id] = null;  //Assigned by UpdateRuntimePose
+            }
+            gameData.factoryCount = 0;
+            Multiplayer.Session.Combat.OnAstroFactoryUnload();
         }
-
-        public void Dispose()
-        {
-            PendingFactories = null;
-            PendingTerrainData = null;
-        }
+        // Temporarily clear all CustomCharts on the unloaded factories to avoid errors
+        gameData.statistics.charts.Free();
+        gameData.statistics.charts.Init(gameData);
     }
 }

@@ -1,43 +1,35 @@
-﻿using NebulaAPI;
+﻿#region
+
+using NebulaAPI.GameState;
+using NebulaAPI.Packets;
 using NebulaModel.Networking;
 using NebulaModel.Packets;
 using NebulaModel.Packets.GameHistory;
 using NebulaWorld;
 
-namespace NebulaNetwork.PacketProcessors.GameHistory
+#endregion
+
+namespace NebulaNetwork.PacketProcessors.GameHistory;
+
+[RegisterPacketProcessor]
+internal class GameHistoryEnqueueTechProcessor : PacketProcessor<GameHistoryEnqueueTechPacket>
 {
-    [RegisterPacketProcessor]
-    internal class GameHistoryEnqueueTechProcessor : PacketProcessor<GameHistoryEnqueueTechPacket>
+    protected override void ProcessPacket(GameHistoryEnqueueTechPacket packet, NebulaConnection conn)
     {
-        private readonly IPlayerManager playerManager;
-
-        public GameHistoryEnqueueTechProcessor()
+        if (IsHost)
         {
-            playerManager = Multiplayer.Session.Network.PlayerManager;
+            using (Multiplayer.Session.History.IsIncomingRequest.On())
+            {
+                GameMain.history.EnqueueTech(packet.TechId);
+            }
+            Server.SendPacketExclude(packet, conn);
         }
-
-        public override void ProcessPacket(GameHistoryEnqueueTechPacket packet, NebulaConnection conn)
+        else
         {
-            if (IsHost)
+            using (Multiplayer.Session.History.IsIncomingRequest.On())
             {
-                INebulaPlayer player = playerManager.GetPlayer(conn);
-                if (player != null)
-                {
-                    using (Multiplayer.Session.History.IsIncomingRequest.On())
-                    {
-                        GameMain.history.EnqueueTech(packet.TechId);
-                    }
-                    playerManager.SendPacketToOtherPlayers(packet, player);
-                }
+                GameMain.history.EnqueueTech(packet.TechId);
             }
-            else
-            {
-                using (Multiplayer.Session.History.IsIncomingRequest.On())
-                {
-                    GameMain.history.EnqueueTech(packet.TechId);
-                }
-            }
-
         }
     }
 }

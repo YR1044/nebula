@@ -1,4 +1,8 @@
-﻿using NebulaAPI;
+﻿#region
+
+using NebulaAPI.GameState;
+using NebulaAPI.Networking;
+using NebulaAPI.Packets;
 using NebulaModel;
 using NebulaModel.DataStructures;
 using NebulaModel.Logger;
@@ -7,86 +11,81 @@ using NebulaModel.Packets;
 using NebulaModel.Packets.Players;
 using NebulaModel.Packets.Session;
 using NebulaWorld;
-using System.Collections.Generic;
 
-namespace NebulaNetwork.PacketProcessors.Session
+#endregion
+
+namespace NebulaNetwork.PacketProcessors.Session;
+
+[RegisterPacketProcessor]
+internal class StartGameMessageProcessor : PacketProcessor<StartGameMessage>
 {
-    [RegisterPacketProcessor]
-    class StartGameMessageProcessor: PacketProcessor<StartGameMessage>
+    public StartGameMessageProcessor()
     {
-        private readonly IPlayerManager playerManager;
-        public StartGameMessageProcessor()
+    }
+
+    protected override void ProcessPacket(StartGameMessage packet, NebulaConnection conn)
+    {
+        if (IsHost)
         {
-            playerManager = Multiplayer.Session.Network.PlayerManager;
-        }
-
-        public override void ProcessPacket(StartGameMessage packet, NebulaConnection conn)
-        {
-            if (IsHost)
+            if (Multiplayer.Session.IsGameLoaded && !GameMain.isFullscreenPaused)
             {
-                if (Multiplayer.Session.IsGameLoaded && !GameMain.isFullscreenPaused)
+                var player = Players.Get(conn, EConnectionStatus.Pending);
+                if (player is null)
                 {
-                    INebulaPlayer player;
-                    using (playerManager.GetPendingPlayers(out Dictionary<INebulaConnection, INebulaPlayer> pendingPlayers))
-                    {
-                        if (!pendingPlayers.TryGetValue(conn, out player))
-                        {
-                            conn.Disconnect(DisconnectionReason.InvalidData);
-                            Log.Warn("WARNING: Player tried to enter the game without being in the pending list");
-                            return;
-                        }
-
-                        pendingPlayers.Remove(conn);
-                    }
-
-                    // Add the new player to the list
-                    using (playerManager.GetSyncingPlayers(out Dictionary<INebulaConnection, INebulaPlayer> syncingPlayers))
-                    {
-                        syncingPlayers.Add(conn, player);
-                    }
-
-                    Multiplayer.Session.World.OnPlayerJoining(player.Data.Username);
-
-                    // Make sure that each player that is currently in the game receives that a new player as join so they can create its RemotePlayerCharacter
-                    PlayerJoining pdata = new PlayerJoining((PlayerData)player.Data.CreateCopyWithoutMechaData(), Multiplayer.Session.NumPlayers); // Remove inventory from mecha data
-                    using (playerManager.GetConnectedPlayers(out Dictionary<INebulaConnection, INebulaPlayer> connectedPlayers))
-                    {
-                        foreach (KeyValuePair<INebulaConnection, INebulaPlayer> kvp in connectedPlayers)
-                        {
-                            kvp.Value.SendPacket(pdata);
-                        }
-                    }
-
-                    //Add current tech bonuses to the connecting player based on the Host's mecha
-                    ((MechaData)player.Data.Mecha).TechBonuses = new PlayerTechBonuses(GameMain.mainPlayer.mecha);
-
-                    conn.SendPacket(new StartGameMessage(true, (PlayerData)player.Data, Config.Options.SyncSoil));
+                    Multiplayer.Session.Server.Disconnect(conn, DisconnectionReason.InvalidData);
+                    Log.Warn("WARNING: Player tried to enter the game without being in the pending list");
+                    return;
                 }
-                else
-                {
-                    conn.SendPacket(new StartGameMessage(false, null, false));
-                }
-            }
-            else if(packet.IsAllowedToStart)
-            {
-                // overwrite local setting with host setting, but dont save it as its a temp setting for this session
-                Config.Options.SyncSoil = packet.SyncSoil;
 
-                ((LocalPlayer)Multiplayer.Session.LocalPlayer).IsHost = false;
-                ((LocalPlayer)Multiplayer.Session.LocalPlayer).SetPlayerData(packet.LocalPlayerData, true);
+                Multiplayer.Session.Server.Players.TryUpgrade(player, EConnectionStatus.Syncing);
 
-                UIRoot.instance.uiGame.planetDetail.gameObject.SetActive(false);
-                Multiplayer.Session.IsInLobby = false;
-                Multiplayer.ShouldReturnToJoinMenu = false;
+                Multiplayer.Session.World.OnPlayerJoining(player.Data.Username);
 
-                DSPGame.StartGameSkipPrologue(UIRoot.instance.galaxySelect.gameDesc);
+                // Make sure that each player that is currently in the game receives that a new player as join so they can create its RemotePlayerCharacter
+                var pdata = new PlayerJoining((PlayerData)player.Data.CreateCopyWithoutMechaData(),
+                    Multiplayer.Session.NumPlayers); // Remove inventory from mecha data
 
-                InGamePopup.ShowInfo("Loading".Translate(), "Loading state from server, please wait".Translate(), null);
+                Server.SendPacket(pdata);
+
+                //Add current tech bonuses to the connecting player based on the Host's mecha
+                ((MechaData)player.Data.Mecha).TechBonuses = new PlayerTechBonuses(GameMain.mainPlayer.mecha);
+
+                conn.SendPacket(new StartGameMessage(true, (PlayerData)player.Data, Config.Options.SyncSoil));
             }
             else
             {
-                InGamePopup.ShowInfo("Unavailable".Translate(), "The host is not ready to let you in, please wait!".Translate(), "OK".Translate());
+                conn.SendPacket(new StartGameMessage(false, null, false));
             }
+        }
+        else if (packet.IsAllowedToStart)
+        {
+            // overwrite local setting with host setting, but dont save it as its a temp setting for this session
+            Config.Options.SyncSoil = packet.SyncSoil;
+
+            ((LocalPlayer)Multiplayer.Session.LocalPlayer).IsHost = false;
+            ((LocalPlayer)Multiplayer.Session.LocalPlayer).SetPlayerData(packet.LocalPlayerData, true);
+
+            UIRoot.instance.uiGame.planetDetail.gameObject.SetActive(false);
+            Multiplayer.Session.IsInLobby = false;
+            Multiplayer.ShouldReturnToJoinMenu = false;
+
+            //Request global part of GameData from host
+            Log.Info("Requesting global GameData from the server");
+            Multiplayer.Session.Network.SendPacket(new GlobalGameDataRequest());
+            if (DSPGame.Game != null)
+            {
+                DSPGame.EndGame();
+            }
+            // Prepare gameDesc to later start in GlobalGameDataResponseProcessor
+            DSPGame.GameDesc = UIRoot.instance.galaxySelect.gameDesc;
+
+            UIRoot.instance.OpenLoadingUI();
+            InGamePopup.ShowInfo("Loading".Translate(), "Loading state from server, please wait".Translate(), null);
+        }
+        else
+        {
+            InGamePopup.ShowInfo("Unavailable".Translate(), "The host is not ready to let you in, please wait!".Translate(),
+                "OK".Translate());
         }
     }
 }

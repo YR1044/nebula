@@ -1,44 +1,28 @@
-﻿using NebulaAPI;
+﻿#region
+
+using NebulaAPI.GameState;
+using NebulaAPI.Packets;
 using NebulaModel.Networking;
 using NebulaModel.Packets;
 using NebulaModel.Packets.Trash;
 using NebulaWorld;
 
-namespace NebulaNetwork.PacketProcessors.Trash
+#endregion
+
+namespace NebulaNetwork.PacketProcessors.Trash;
+
+[RegisterPacketProcessor]
+internal class TrashSystemClearAllTrashProcessor : PacketProcessor<TrashSystemClearAllTrashPacket>
 {
-    [RegisterPacketProcessor]
-    internal class TrashSystemClearAllTrashProcessor : PacketProcessor<TrashSystemClearAllTrashPacket>
+    protected override void ProcessPacket(TrashSystemClearAllTrashPacket packet, NebulaConnection conn)
     {
-        private readonly IPlayerManager playerManager;
-
-        public TrashSystemClearAllTrashProcessor()
+        if (IsHost)
         {
-            playerManager = Multiplayer.Session.Network.PlayerManager;
+            Server.SendPacketExclude(packet, conn);
         }
-
-        public override void ProcessPacket(TrashSystemClearAllTrashPacket packet, NebulaConnection conn)
+        using (Multiplayer.Session.Trashes.IsIncomingRequest.On())
         {
-            bool valid = true;
-            if (IsHost)
-            {
-                INebulaPlayer player = playerManager.GetPlayer(conn);
-                if (player != null)
-                {
-                    playerManager.SendPacketToOtherPlayers(packet, player);
-                }
-                else
-                {
-                    valid = false;
-                }
-            }
-
-            if (valid)
-            {
-                using (Multiplayer.Session.Trashes.ClearAllTrashFromOtherPlayers.On())
-                {
-                    GameMain.data.trashSystem.ClearAllTrash();
-                }
-            }
+            GameMain.data.trashSystem.ClearAllTrash();
         }
     }
 }

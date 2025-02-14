@@ -1,25 +1,34 @@
-﻿using NebulaAPI;
+﻿#region
+
+using System;
+using NebulaAPI.Packets;
+using NebulaModel.Logger;
 using NebulaModel.Networking;
 using NebulaModel.Packets;
 using NebulaModel.Packets.Logistics;
-using NebulaWorld;
+using NebulaWorld.Logistics;
 
-namespace NebulaNetwork.PacketProcessors.Logistics
+#endregion
+
+namespace NebulaNetwork.PacketProcessors.Logistics;
+
+[RegisterPacketProcessor]
+public class ILSWorkShipBackToIdleProcessor : PacketProcessor<ILSWorkShipBackToIdle>
 {
-    [RegisterPacketProcessor]
-    public class ILSWorkShipBackToIdleProcessor : PacketProcessor<ILSWorkShipBackToIdle>
+    protected override void ProcessPacket(ILSWorkShipBackToIdle packet, NebulaConnection conn)
     {
-        public override void ProcessPacket(ILSWorkShipBackToIdle packet, NebulaConnection conn)
+        if (!IsClient)
         {
-            if (IsHost)
-            {
-                return;
-            }
+            return;
+        }
 
-            if (IsClient)
-            {
-                Multiplayer.Session.Ships.WorkShipBackToIdle(packet);
-            }
+        try
+        {
+            ILSShipManager.WorkShipBackToIdle(packet);
+        }
+        catch (Exception e)
+        {
+            Log.Warn(e);
         }
     }
 }
