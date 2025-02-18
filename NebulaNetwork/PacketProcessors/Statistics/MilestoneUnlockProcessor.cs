@@ -1,44 +1,48 @@
-﻿using NebulaAPI;
+﻿#region
+
+using NebulaAPI.Packets;
 using NebulaModel.Networking;
 using NebulaModel.Packets;
 using NebulaModel.Packets.Statistics;
 using NebulaWorld;
 
-namespace NebulaNetwork.PacketProcessors.Statistics
+#endregion
+
+namespace NebulaNetwork.PacketProcessors.Statistics;
+
+[RegisterPacketProcessor]
+internal class MilestoneUnlockProcessor : PacketProcessor<MilestoneUnlockPacket>
 {
-    [RegisterPacketProcessor]
-    internal class MilestoneUnlockProcessor : PacketProcessor<MilestoneUnlockPacket>
+    protected override void ProcessPacket(MilestoneUnlockPacket packet, NebulaConnection conn)
     {
-        public override void ProcessPacket(MilestoneUnlockPacket packet, NebulaConnection conn)
+        var valid = true;
+
+        if (IsHost)
         {
-            IPlayerManager playerManager = Multiplayer.Session.Network.PlayerManager;
-            bool valid = true;
-
-            if (IsHost)
+            var player = Players.Get(conn);
+            if (player != null)
             {
-                INebulaPlayer player = playerManager.GetPlayer(conn);
-                if (player != null)
-                {
-                    playerManager.SendPacketToOtherPlayers(packet, player);
-                }
-                else
-                {
-                    valid = false;
-                }
+                Server.SendPacketExclude(packet, conn);
             }
-
-            if (valid)
+            else
             {
-                using (Multiplayer.Session.Statistics.IsIncomingRequest.On())
-                {
-                    if (GameMain.data.milestoneSystem.milestoneDatas.TryGetValue(packet.Id, out MilestoneData milestoneData))
-                    {
-                        milestoneData.journalData.patternId = packet.PatternId;
-                        milestoneData.journalData.parameters = packet.Parameters;
-                        GameMain.data.milestoneSystem.UnlockMilestone(packet.Id, packet.UnlockTick);
-                    }
-                }
+                valid = false;
             }
+        }
+
+        if (!valid)
+        {
+            return;
+        }
+        using (Multiplayer.Session.Statistics.IsIncomingRequest.On())
+        {
+            if (!GameMain.data.milestoneSystem.milestoneDatas.TryGetValue(packet.Id, out var milestoneData))
+            {
+                return;
+            }
+            milestoneData.journalData.patternId = packet.PatternId;
+            milestoneData.journalData.parameters = packet.Parameters;
+            GameMain.data.milestoneSystem.UnlockMilestone(packet.Id, packet.UnlockTick);
         }
     }
 }

@@ -1,51 +1,50 @@
-﻿using HarmonyLib;
+﻿#region
+
+using HarmonyLib;
 using NebulaWorld;
 
-namespace NebulaPatcher.Patches.Dynamic
+#endregion
+
+namespace NebulaPatcher.Patches.Dynamic;
+
+[HarmonyPatch(typeof(PowerSystem))]
+internal class PowerSystem_Patch
 {
-    [HarmonyPatch(typeof(PowerSystem))]
-    internal class PowerSystem_Patch
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(PowerSystem.GameTick))]
+    public static void PowerSystem_GameTick_Prefix(PowerSystem __instance, long time, ref bool isActive)
     {
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(PowerSystem.GameTick))]
-        public static void PowerSystem_GameTick_Prefix(long time, ref bool isActive)
+        if (!Multiplayer.IsActive) return;
+
+        // Enable signType update on remote planet every 64 tick
+        if ((time & 63) == 0 && Multiplayer.Session.IsServer)
         {
-            //Enable signType update on remote planet every 64 tick
-            if ((time & 63) == 0 && Multiplayer.IsActive && Multiplayer.Session.LocalPlayer.IsHost)
-            {
-                isActive |= true;
-            }
+            isActive = true;
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(PowerSystem.GameTick))]
-        public static void PowerSystem_GameTick_Postfix(PowerSystem __instance, long time, bool isActive, bool isMultithreadMode)
+        // Temporary fix NRE of factoryStatPool in client (note: try to find the root cause in the future)
+        var factoryIndex = __instance.factory.index;
+        if (GameMain.statistics.production.factoryStatPool[factoryIndex] == null)
         {
-            if (Multiplayer.IsActive)
-            {
-                for (int i = 1; i < __instance.netCursor; i++)
-                {
-                    PowerNetwork pNet = __instance.netPool[i];
-                    pNet.energyRequired += Multiplayer.Session.PowerTowers.GetExtraDemand(__instance.planet.id, i);
-                }
-                Multiplayer.Session.PowerTowers.GivePlayerPower();
-                Multiplayer.Session.PowerTowers.UpdateAllAnimations(__instance.planet.id);
-            }
+            GameMain.statistics.production.factoryStatPool[factoryIndex] = new FactoryProductionStat();
+            GameMain.statistics.production.factoryStatPool[factoryIndex].Init();
         }
+    }
 
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(PowerSystem.RemoveNodeComponent))]
-        public static bool RemoveNodeComponent(PowerSystem __instance, int id)
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(PowerSystem.RemoveNodeComponent))]
+    public static bool RemoveNodeComponent(PowerSystem __instance, int id)
+    {
+        if (!Multiplayer.IsActive)
         {
-            if (Multiplayer.IsActive)
-            {
-                // as the destruct is synced accross players this event is too
-                // and as such we can safely remove power demand for every player
-                PowerNodeComponent pComp = __instance.nodePool[id];
-                Multiplayer.Session.PowerTowers.RemExtraDemand(__instance.planet.id, pComp.networkId, id);
-            }
-
             return true;
         }
+        // as the destruct is synced across players this event is too
+        // and as such we can safely remove power demand for every player        
+        Multiplayer.Session.PowerTowers.LocalChargerIds.Remove(id);
+        var hashId = (long)__instance.factory.planetId << 32 | (long)id;
+        Multiplayer.Session.PowerTowers.RemoteChargerHashIds.Remove(hashId);
+
+        return true;
     }
 }

@@ -1,14 +1,15 @@
-﻿namespace NebulaModel.Packets.Players
+﻿namespace NebulaModel.Packets.Players;
+
+public class PlayerUpdateLocalStarId
 {
-    public class PlayerUpdateLocalStarId
+    public PlayerUpdateLocalStarId() { }
+
+    public PlayerUpdateLocalStarId(ushort playerId, int starId)
     {
-        public int StarId { get; set; }
-
-        public PlayerUpdateLocalStarId() { }
-
-        public PlayerUpdateLocalStarId(int starId)
-        {
-            StarId = starId;
-        }
+        PlayerId = playerId;
+        StarId = starId;
     }
+
+    public ushort PlayerId { get; set; }
+    public int StarId { get; set; }
 }

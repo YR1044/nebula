@@ -1,5 +1,131 @@
 ## Changelog
 
+0.9.16:
+- Compatible with game version 0.10.32.25682
+
+0.9.15:
+- Compatible with game version 0.10.32.25595
+- @starfi5h: Add object protoId check for destruct and upgrade requests
+
+0.9.14:
+- @starfi5h: Add `Enable Other Player Sounds` config settings in multiplayer general tab  
+- @starfi5h: Fix headless server error
+- @starfi5h: When GalacticScale is present, hide New Game (Host) button due to compatibility
+- @starfi5h: Fix lastSaveTime initialization and the issue of hearing other player audio on the other planet
+
+0.9.13:
+- Compatible with game version 0.10.32.25552
+- @starfi5h: Sync ejector auto orbit and blueprint paste foundation
+- @starfi5h: Force enable drone and shield burst for client
+- Note: The dashboard is not synced. Clients will lose their custom stats when they leave the star system
+
+0.9.12:
+- Compatible with game version 0.10.31.24697
+- @starfi5h: Client can now use metadata to unlock tech. Sandbox unlock by client is now synced
+- @starfi5h: Remove metadata requirement for blueprint tech due to client can't get metadata in MP
+- @starfi5h: The right part of logistics control panel (I) is available for loaded planet
+- @starfi5h: Sync Reference rate, Import/Export storage, Storage amount in production statistics panel
+
+0.9.11:
+- @starfi5h: Fix half-growth dark fog bases keep regenerating
+- @starfi5h: Fix combat drones doesn't increase ground base threat
+- @starfi5h: Fix errors in NgrokManager.IsNgrokActive and SpaceSector.RemoveEnemyWithComponents
+
+0.9.10:
+- @fakeboboliu: Support to connect server with WSS by specifying wss:// in the connect Uri
+- @starfi5h: Sync Logistics Control Panel (I) entry list
+- @starfi5h: Esc in multiplayer menu can now return to the upper-level
+- @starfi5h: (Balance) When player killed, Drop half of item in inventory and increase CD from 1.5s to 5s
+- @starfi5h: (Balance) Increase base alert range to player from 90 to 200
+- @starfi5h: Space hive threat will now increase correctly when client attack relays by player's fleet
+- @starfi5h: DF base/hive will now launch attack at player on remote empty planet too
+- @starfi5h: Fix client player can't see the death animation of other clients
+- @starfi5h: Fix DF base sometimes can't be destroyed in client
+- @starfi5h: (Headless server) Stop relay landing when there are 7 or more working shield generators
+
+0.9.9:
+- @starfi5h: Fix multiplayer tab in the option window for DSP v0.10.30.23430
+- @starfi5h: Separate error close button (x) and copy button
+- @starfi5h: Sync WarningBroadcastData: LandingRelay, ApproachingSeed, BuildingDestroyed and 3 more
+
+0.9.8:
+- @AlienXAXS: Added Online Player UI (Backtick key by default)
+- @AlienXAXS: Updated Nebula to be compatible with Dyson Sphere Program v0.10.30.23292
+- @starfi5h: Temporarily disable Logistics Control Panel (I) interactions
+- @starfi5h: Fix a bug that battle notification toggle in multiplayer chat settings has no effect
+
+0.9.7:
+- @AlienXAXS: Headless now calculates planetary shields on CPU
+- @AlienXAXS: Enemy Relay Direction Sync
+- @starfi5h: Sync damage to space enemy by mecha fleet
+- @starfi5h: Fix NRE in Bomb_Explosive.TickSkillLogic when other player throwing bomb on other planets
+- @starfi5h: Fix error in EnemyUnitComponent.RunBehavior_Defense_Ground after client load factory
+
+0.9.6:
+- @AlienXAXS: Fix headless server throwing a small error during boot sequence due to the UI being disabled
+- @PhantomGamers: Add additional error description to ngrokmanager
+- @starfi5h: Enable Log.Debug messages
+- @starfi5h: Fix DF relay landed on planet message in client
+- @starfi5h: Fix client's attacks won't increase DF threat when host player is dead
+- @starfi5h: Fix ACH_BroadcastStar.OnGameTick error on client
+- @starfi5h: Prevent server from sending out construction drones in headless mode
+
+0.9.5:
+- @starfi5h: Sync Dark Fog communicator (aggressiveness and truce)
+- @starfi5h: Show server last save time in client esc menu
+- @starfi5h: Fix veins don't get buried by foundations on remote planets and log error crash
+
+0.9.4:
+- Compatible with Steam or Game Pass version 0.10.30.22292
+- @PhantomGamers: Prevent errors with Ngrok from crashing the game
+- @PhantomGamers: Added error descriptions to Ngrok errors
+- @starfi5h: Sync interstellar routes
+- @starfi5h: Sync tilted conveyor belts
+
+0.9.3:
+- @starfi5h: Change chat message format. Player's name now has an underlined link to navigate
+- @starfi5h: Add new config option Chat - Show Timestamp to enable/disable timestamp before the chat message
+- @starfi5h: Add new CLI arugment `/newgame-cfg` to load the parameters from the config file `nebulaGameDescSettings.cfg`
+- @starfi5h: Add new chat command `/dev`
+- @starfi5h: Fix inventory error in client
+- @starfi5h: Fix hp bar doesn't vanish after deleting the building when client joins
+- @starfi5h: Fix enemies and ILS related errors
+
+0.9.2:
+- Compatible with Steam version 0.10.29.22015 or Game Pass version 0.10.29.21943
+- @sk7725: Added Korean font and TextMeshPro fallback
+- @starfi5h: Add new chat command `/playerdata`
+- @starfi5h: Launch construction drones if local player is closer or within 15m
+- @starfi5h: Fix error when activating super nova in the turret window
+- @starfi5h: Fix desync of dyson sphere when client joins the game
+- @phantomgamers: Log expected game version and review code
+
+0.9.1:
+- Support combat mode syncing (game version 0.10.29.21950)  
+- @starfi5h: Implement basic combat syncing framework
+- @starfi5h: Add new config option `EnableBattleMessage` to show battle notifications
+- @starfi5h: Add map ping: when chat is open, `Ctrl+Alt+LeftClick` on the planet can create a link in chatbox
+- @mmjr, @phantomgamers, @sp00ktober: Review code and provide suggestions
+
+0.9.0:
+- Now compatible with Dark Fog game version (DSP 0.10.x). Combat mode is not supported yet.
+- @phantomgamers: fix compilation after update and overall fixes/cleanup
+- @phantomgamers: fix UIVirtualStarmap patches
+- @phantomgamers: reviewing code from other contributers
+- @starfi5h: fix runtime issues after the update and overall fixes/cleanup
+- @starfi5h: improve UI and Keybinding
+- @starfi5h: rework Wireless Power Tower syncing
+- @starfi5h: add syncing for Battlefield Analysis Base
+- @mmjr: disable dark fog switch in lobby and prevent df enabled saves to be loaded.
+- @ajh16: sync dark fog lobby settings
+- @highrizk: sync storage filters
+- @highrizk: update serializer and fix broken packets
+- @highrizk: add serialization support and unit tests for dictionaries
+- @zzarek: add turret UI syncing
+- @sp00ktober: add syncing for new mecha settings and features
+- @sp00ktober: sync mecha and battle base construction drones
+- @sp00ktober: overall NRE fixes
+
 0.8.14:
 - @starfi5h: Fix mecha animation when player count > 2  
 - @starfi5h: Fix UIPerformance save test in multiplayer  

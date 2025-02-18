@@ -1,9 +1,19 @@
-﻿using System.Net;
+﻿#region
 
-namespace NebulaModel.Networking
+using System.Net;
+using NebulaAPI.GameState;
+
+#endregion
+
+namespace NebulaModel.Networking;
+
+public interface IClient : INetworkProvider
 {
-    public interface IClient
-    {
-        IPEndPoint ServerEndpoint { get; }
-    }
+    IPEndPoint ServerEndpoint { get; set; }
+
+    public void Update();
+
+    public void Start();
+
+    public void Stop();
 }
